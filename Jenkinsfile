@@ -51,7 +51,7 @@ pipeline {
         bat '''
 curl -sSLo sonar-scanner.zip ^
   https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-windows.zip
-powershell -Command "Expand-Archive sonar-scanner.zip -DestinationPath scanner"
+powershell -Command "Expand-Archive sonar-scanner.zip -DestinationPath scanner -Force"
 '''
 
         // 2) Run the scanner, pointing at your sonar-project.properties and using the token

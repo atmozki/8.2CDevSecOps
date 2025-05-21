@@ -21,64 +21,87 @@ pipeline {
 
     stage('Run Tests') {
       steps {
-        // allow failures so we still generate coverage
-        bat 'npm test || exit 0'
+        // capture everything into test.log
+        bat 'npm test > test.log 2>&1 || exit 0'
+      }
+      post {
+        success {
+          emailext(
+            subject: "Run Tests SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+            to:      "youremail@domain.com",
+            body:    """\
+              Stage: Run Tests
+              Status: SUCCESS
+
+              See attached log for details.
+            """.stripIndent(),
+            mimeType: 'text/plain; charset=UTF-8',
+            attachmentsPattern: 'test.log'
+          )
+        }
+        failure {
+          emailext(
+            subject: "Run Tests FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+            to:      "youremail@domain.com",
+            body:    """\
+              Stage: Run Tests
+              Status: FAILURE
+
+              See attached log for details.
+            """.stripIndent(),
+            mimeType: 'text/plain; charset=UTF-8',
+            attachmentsPattern: 'test.log'
+          )
+        }
       }
     }
 
     stage('Generate Coverage Report') {
       steps {
-        // Ensure coverage report exists
-        bat 'npm run coverage || exit 0'
+        bat 'npm run coverage > coverage.log 2>&1 || exit 0'
       }
     }
 
     stage('NPM Audit (Security Scan)') {
       steps {
-        // This will show known CVEs in the output
-        bat 'npm audit || exit 0'
+        bat 'npm audit > audit.log 2>&1 || exit 0'
+      }
+      post {
+        success {
+          emailext(
+            subject: "Security Scan SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+            to:      "dennisjojok@gmail.com",
+            body:    """\
+              Stage: Security Scan
+              Status: SUCCESS
+
+              See attached audit.log for details.
+            """.stripIndent(),
+            mimeType: 'text/plain; charset=UTF-8',
+            attachmentsPattern: 'audit.log'
+          )
+        }
+        failure {
+          emailext(
+            subject: "Security Scan FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+            to:      "dennisjojok@gmail.com",
+            body:    """\
+              Stage: Security Scan
+              Status: FAILURE
+
+              See attached audit.log for details.
+            """.stripIndent(),
+            mimeType: 'text/plain; charset=UTF-8',
+            attachmentsPattern: 'audit.log'
+          )
+        }
       }
     }
   }
 
   post {
-    success {
-      emailext(
-        subject: "SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-        to:      "dennisjojok@gmail.com",
-        body:    """\
-          Hi team,
-
-          The build *${env.JOB_NAME}* #${env.BUILD_NUMBER} succeeded!
-
-          ▶️ ${env.BUILD_URL}
-
-          Regards,
-          Jenkins
-        """.stripIndent()
-      )
-    }
-
-    failure {
-      emailext(
-        subject: "FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-        to:      "dennisjojok@gmail.com",
-        body:    """\
-          Hi team,
-
-          The build *${env.JOB_NAME}* #${env.BUILD_NUMBER} failed.
-
-          Please check the console output for details:
-          ▶️ ${env.BUILD_URL}
-
-          Regards,
-          Jenkins
-        """.stripIndent()
-      )
-    }
-
     always {
-      // archive coverage reports if any
+      // still archive coverage if you like
       archiveArtifacts artifacts: '**/coverage/*.html', allowEmptyArchive: true
     }
   }

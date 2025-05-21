@@ -49,28 +49,28 @@ pipeline {
     }
 
     stage('SonarCloud Analysis') {
-      environment {
-        // Resolve the jdk17 tool installation path
-        JAVA_HOME = tool name: 'jdk17', type: 'jdk'
-        // Ensure Java 17’s bin directory is first on PATH
-        PATH      = "${JAVA_HOME}\\bin;${env.PATH}"
-      }
-      steps {
-        // 1) Download & unzip the SonarScanner CLI
-        bat '''
-curl -sSLo sonar-scanner.zip ^
-  https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-windows.zip
-powershell -Command "Expand-Archive sonar-scanner.zip -DestinationPath scanner -Force"
-'''
+  steps {
+    script {
+      // ask Jenkins for the jdk17 install path
+      def jdk17Home = tool 'jdk17'
+      bat """
+        :: 1) force JAVA_HOME to JDK17
+        set JAVA_HOME=${jdk17Home}
+        set PATH=%JAVA_HOME%\\bin;%PATH%
 
-        // 2) Run the scanner under Java 17
-        bat '''
-set PATH=%CD%\\scanner\\sonar-scanner-4.8.0.2856-windows\\bin;%PATH%
-sonar-scanner ^
-  -Dsonar.login=%SONAR_TOKEN%
-'''
-      }
+        :: 2) download & unzip SonarScanner CLI
+        curl -sSLo sonar-scanner.zip ^
+          https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-windows.zip
+        powershell -Command "Expand-Archive sonar-scanner.zip -DestinationPath scanner -Force"
+
+        :: 3) prepend scanner/bin and run the analysis under Java 17
+        set PATH=%CD%\\scanner\\sonar-scanner-4.8.0.2856-windows\\bin;%PATH%
+        sonar-scanner ^
+          -Dsonar.login=%SONAR_TOKEN%
+      """
     }
+  }
+}
   }
 
   post {

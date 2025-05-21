@@ -48,46 +48,41 @@ pipeline {
       }
     }
 
-    stage('SonarCloud Analysis') {
+   stage('SonarCloud Analysis') {
   steps {
     script {
-      // 1) Resolve my JDK17 install path from Global Tool Configuration
+      // 1) Resolve your JDK 17 install path
       def jdk17Home = tool 'jdk17'
 
-      // 2) Run EVERYTHING in one bat session so JAVA_HOME sticks
+      // 2) Run in one bat session so JAVA_HOME sticks
       bat """
         @echo off
         echo ----------------------------------------
         echo Using JDK from: ${jdk17Home}
         echo ----------------------------------------
 
-        :: Force JAVA_HOME to JDK 17
+        :: Point JAVA_HOME and PATH at JDK 17
         set "JAVA_HOME=${jdk17Home}"
-
-        :: Make sure Java 17 is first on the PATH
         set "PATH=%JAVA_HOME%\\bin;%PATH%"
-
-        :: DEBUG: verify which java we're using
-        echo --- java -version ---
-        java -version
-        echo ----------------------
 
         :: Download & unzip SonarScanner CLI
         curl -sSLo sonar-scanner.zip ^
           https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-windows.zip
         powershell -Command "Expand-Archive sonar-scanner.zip -DestinationPath scanner -Force"
 
+        :: OPTION 2: delete the embedded JRE so scanner falls back to JAVA_HOME
+        rmdir /s /q scanner\\sonar-scanner-4.8.0.2856-windows\\jre
+
         :: Prepend the scanner’s bin dir
         set "PATH=%CD%\\scanner\\sonar-scanner-4.8.0.2856-windows\\bin;%PATH%"
 
-        :: Finally invoke the scanner under Java 17
+        :: Finally invoke the scanner under your Java 17
         sonar-scanner ^
           -Dsonar.login=%SONAR_TOKEN%
       """
     }
   }
 }
-
   }
 
   post {

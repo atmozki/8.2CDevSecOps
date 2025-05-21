@@ -28,7 +28,7 @@ pipeline {
         success {
           emailext(
             subject: "Run Tests SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-            to:      "youremail@domain.com",
+            to:      "dennisjojok@gmail.com",
             body:    """\
               Stage: Run Tests
               Status: SUCCESS
@@ -42,7 +42,7 @@ pipeline {
         failure {
           emailext(
             subject: "Run Tests FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-            to:      "youremail@domain.com",
+            to:      "dennisjojok@gmail.com",
             body:    """\
               Stage: Run Tests
               Status: FAILURE

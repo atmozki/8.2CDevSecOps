@@ -2,18 +2,12 @@ pipeline {
   agent any
 
   tools {
-    // Make jdk17 and Node14 available
-    jdk  'jdk17'
-    nodejs 'Node14'
-  }
-
-  environment {
-    // Inject your SonarCloud token
-    SONAR_TOKEN = credentials('SONAR_TOKEN')
+    // Make JDK 17 and Node 14 available
+    jdk     'jdk17'
+    nodejs  'Node14'
   }
 
   stages {
-
     stage('Checkout') {
       steps {
         git branch: 'main',
@@ -47,58 +41,41 @@ pipeline {
         bat 'npm audit || exit 0'
       }
     }
-
-   stage('SonarCloud Analysis') {
-  steps {
-    script {
-      // 1) Resolve your JDK 17 install path
-      def jdk17Home = tool 'jdk17'
-      echo "Resolved JDK17 home to: ${jdk17Home}"
-
-      // 2) Execute everything in one bat session
-      bat """
-        @echo off
-        echo ----------------------------------------
-        echo Setting JAVA_HOME to %JAVA_HOME%
-        echo ----------------------------------------
-
-        :: Use the tool path
-        set "JAVA_HOME=${jdk17Home}"
-        set "PATH=%JAVA_HOME%\\bin;%PATH%"
-
-        :: 3) Verify that java.exe is actually callable
-        echo Verifying Java version…
-        "%JAVA_HOME%\\bin\\java.exe" -version || (
-          echo.
-          echo ************************************************************
-          echo ERROR: Failed to run "%JAVA_HOME%\\bin\\java.exe"
-          echo ************************************************************
-          exit /b 1
-        )
-        echo.
-
-        :: 4) Download & unzip SonarScanner CLI
-        curl -sSLo sonar-scanner.zip ^
-          https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-windows.zip
-        powershell -Command "Expand-Archive sonar-scanner.zip -DestinationPath scanner -Force"
-
-        :: 5) OPTION 2: remove the embedded JRE so it falls back to our JAVA_HOME
-        rmdir /s /q "scanner\\sonar-scanner-4.8.0.2856-windows\\jre"
-
-        :: 6) Prepend the scanner’s bin dir
-        set "PATH=%CD%\\scanner\\sonar-scanner-4.8.0.2856-windows\\bin;%PATH%"
-
-        :: 7) Finally invoke the scanner under Java 17
-        sonar-scanner ^
-          -Dsonar.login=%SONAR_TOKEN%
-      """
-    }
-  }
-}
-
   }
 
   post {
+    success {
+      // on success, send a green-check email
+      emailext(
+        subject: "✅ SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+        to:      "dennisjojok@gmail.com",
+        body:    """\
+          Build succeeded!
+          
+          Job: ${env.JOB_NAME}
+          Build Number: ${env.BUILD_NUMBER}
+          URL: ${env.BUILD_URL}
+        """.stripIndent()
+      )
+    }
+
+    failure {
+      // on failure, send a red-cross email
+      emailext(
+        subject: "❌ FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+        to:      "dennisjojok@gmail.com",
+        body:    """\
+          Build failed!
+          
+          Job: ${env.JOB_NAME}
+          Build Number: ${env.BUILD_NUMBER}
+          URL: ${env.BUILD_URL}
+
+          Check console output for details.
+        """.stripIndent()
+      )
+    }
+
     always {
       // archive logs, coverage reports, etc.
       archiveArtifacts artifacts: '**/coverage/*.html, **/sonar-scanner.log', allowEmptyArchive: true

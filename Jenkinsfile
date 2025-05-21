@@ -55,37 +55,40 @@ pipeline {
       def jdk17Home = tool 'jdk17'
       echo "Resolved JDK17 home to: ${jdk17Home}"
 
-      // 2) Run everything in one bat session so our env sticks
+      // 2) Execute everything in one bat session
       bat """
         @echo off
         echo ----------------------------------------
-        echo Checking for java.exe under ${jdk17Home}\\bin
+        echo Setting JAVA_HOME to %JAVA_HOME%
         echo ----------------------------------------
 
-        :: Quick sanity check – exit if java.exe isn’t there
-        if not exist "${jdk17Home}\\bin\\java.exe" (
-          echo ERROR: no java.exe found in ${jdk17Home}\\bin
-          echo Content of ${jdk17Home}:
-          dir "${jdk17Home}"
-          exit /b 1
-        )
-
-        :: Point JAVA_HOME and PATH at the verified JDK 17
+        :: Use the tool path
         set "JAVA_HOME=${jdk17Home}"
         set "PATH=%JAVA_HOME%\\bin;%PATH%"
 
-        :: Download & unzip SonarScanner
+        :: 3) Verify that java.exe is actually callable
+        echo Verifying Java version…
+        "%JAVA_HOME%\\bin\\java.exe" -version || (
+          echo.
+          echo ************************************************************
+          echo ERROR: Failed to run "%JAVA_HOME%\\bin\\java.exe"
+          echo ************************************************************
+          exit /b 1
+        )
+        echo.
+
+        :: 4) Download & unzip SonarScanner CLI
         curl -sSLo sonar-scanner.zip ^
           https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-windows.zip
         powershell -Command "Expand-Archive sonar-scanner.zip -DestinationPath scanner -Force"
 
-        :: OPTION 2: delete the embedded JRE so it falls back to our JAVA_HOME
+        :: 5) OPTION 2: remove the embedded JRE so it falls back to our JAVA_HOME
         rmdir /s /q "scanner\\sonar-scanner-4.8.0.2856-windows\\jre"
 
-        :: Prepend the scanner’s bin dir
+        :: 6) Prepend the scanner’s bin dir
         set "PATH=%CD%\\scanner\\sonar-scanner-4.8.0.2856-windows\\bin;%PATH%"
 
-        :: Finally invoke the scanner under Java 17
+        :: 7) Finally invoke the scanner under Java 17
         sonar-scanner ^
           -Dsonar.login=%SONAR_TOKEN%
       """

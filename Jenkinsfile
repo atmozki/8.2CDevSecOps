@@ -1,6 +1,6 @@
 pipeline {
   agent any
-  // This is a Jenkins pipeline script
+
   tools {
     // Node.js version configured in Jenkins Global Tool Configuration
     nodejs 'Node14'

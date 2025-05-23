@@ -1,11 +1,15 @@
 pipeline {
   agent any
-
+  // This is a Jenkins pipeline script
   tools {
+    // Node.js version configured in Jenkins Global Tool Configuration
     nodejs 'Node14'
   }
 
   stages {
+
+    // Tool: Git
+    // Purpose: Clone the project repository from GitHub
     stage('Checkout') {
       steps {
         git branch: 'main',
@@ -13,12 +17,16 @@ pipeline {
       }
     }
 
+    // Tool: npm
+    // Purpose: Install all project dependencies
     stage('Install Dependencies') {
       steps {
         bat 'npm install'
       }
     }
 
+    // Tool: Mocha (test runner) via npm
+    // Purpose: Run unit and functional tests; save output to log
     stage('Run Tests') {
       steps {
         // capture everything into test.log
@@ -56,12 +64,16 @@ pipeline {
       }
     }
 
+    // Tool: nyc (Istanbul)
+    // Purpose: Generate code coverage report
     stage('Generate Coverage Report') {
       steps {
         bat 'npm run coverage > coverage.log 2>&1 || exit 0'
       }
     }
 
+    // Tool: npm audit
+    // Purpose: Run security vulnerability scan on dependencies
     stage('NPM Audit (Security Scan)') {
       steps {
         bat 'npm audit > audit.log 2>&1 || exit 0'
@@ -96,13 +108,6 @@ pipeline {
           )
         }
       }
-    }
-  }
-
-  post {
-    always {
-      // still archive coverage if you like
-      archiveArtifacts artifacts: '**/coverage/*.html', allowEmptyArchive: true
     }
   }
 }
